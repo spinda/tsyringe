@@ -27,7 +27,6 @@ import Registry from "./registry";
 import Lifecycle from "./types/lifecycle";
 import ResolutionContext from "./resolution-context";
 import {formatErrorCtor} from "./error-helpers";
-import {DelayedConstructor} from "./lazy-helpers";
 import Disposable, {isDisposable} from "./types/disposable";
 import InterceptorOptions from "./types/interceptor-options";
 import Interceptors from "./interceptors";
@@ -220,10 +219,10 @@ class InternalDependencyContainer implements DependencyContainer {
     );
   }
 
-  public resolve<T>(
+  public async resolve<T>(
     token: InjectionToken<T>,
     context: ResolutionContext = new ResolutionContext()
-  ): T {
+  ): Promise<T> {
     this.ensureNotDisposed();
 
     const registration = this.getRegistration(token);
@@ -237,14 +236,18 @@ class InternalDependencyContainer implements DependencyContainer {
     this.executePreResolutionInterceptor<T>(token, "Single");
 
     if (registration) {
-      const result = this.resolveRegistration(registration, context) as T;
+      const result = (await this.resolveRegistration(
+        registration,
+        context
+      )) as T;
       this.executePostResolutionInterceptor(token, result, "Single");
       return result;
     }
 
     // No registration for this token, but since it's a constructor, return an instance
     if (isConstructorToken(token)) {
-      const result = this.construct(token, context);
+      const result = await this.construct(token, context);
+      // TODO (KJM): wait for async initialization of `result`
       this.executePostResolutionInterceptor(token, result, "Single");
       return result;
     }
@@ -291,10 +294,10 @@ class InternalDependencyContainer implements DependencyContainer {
     }
   }
 
-  private resolveRegistration<T>(
+  private async resolveRegistration<T>(
     registration: Registration,
     context: ResolutionContext
-  ): T {
+  ): Promise<T> {
     this.ensureNotDisposed();
 
     // If we have already resolved this scoped dependency, return it
@@ -318,24 +321,26 @@ class InternalDependencyContainer implements DependencyContainer {
     } else if (isTokenProvider(registration.provider)) {
       resolved = returnInstance
         ? registration.instance ||
-          (registration.instance = this.resolve(
+          (registration.instance = await this.resolve(
             registration.provider.useToken,
             context
           ))
-        : this.resolve(registration.provider.useToken, context);
+        : await this.resolve(registration.provider.useToken, context);
     } else if (isClassProvider(registration.provider)) {
       resolved = returnInstance
         ? registration.instance ||
-          (registration.instance = this.construct(
+          (registration.instance = await this.construct(
             registration.provider.useClass,
             context
           ))
-        : this.construct(registration.provider.useClass, context);
+        : await this.construct(registration.provider.useClass, context);
     } else if (isFactoryProvider(registration.provider)) {
-      resolved = registration.provider.useFactory(this);
+      resolved = await registration.provider.useFactory(this);
     } else {
-      resolved = this.construct(registration.provider, context);
+      resolved = await this.construct(registration.provider, context);
     }
+
+    // TODO (KJM): wait for async initialization of `resolved`
 
     // If this is a scoped dependency, store resolved instance in context
     if (registration.options.lifecycle === Lifecycle.ResolutionScoped) {
@@ -345,10 +350,10 @@ class InternalDependencyContainer implements DependencyContainer {
     return resolved;
   }
 
-  public resolveAll<T>(
+  public async resolveAll<T>(
     token: InjectionToken<T>,
     context: ResolutionContext = new ResolutionContext()
-  ): T[] {
+  ): Promise<T[]> {
     this.ensureNotDisposed();
 
     const registrations = this.getAllRegistrations(token);
@@ -362,16 +367,17 @@ class InternalDependencyContainer implements DependencyContainer {
     this.executePreResolutionInterceptor(token, "All");
 
     if (registrations) {
-      const result = registrations.map(item =>
-        this.resolveRegistration<T>(item, context)
-      );
-
+      const result = [];
+      for (const item of registrations) {
+        result.push(await this.resolveRegistration<T>(item, context));
+      }
       this.executePostResolutionInterceptor(token, result, "All");
       return result;
     }
 
     // No registration for this token, but since it's a constructor, return an instance
-    const result = [this.construct(token as constructor<T>, context)];
+    const result = [await this.construct(token as constructor<T>, context)];
+    // TODO (KJM): wait for async initialization of `resolved`
     this.executePostResolutionInterceptor(token, result, "All");
     return result;
   }
@@ -508,17 +514,17 @@ class InternalDependencyContainer implements DependencyContainer {
     return null;
   }
 
-  private construct<T>(
-    ctor: constructor<T> | DelayedConstructor<T>,
+  private async construct<T>(
+    ctor: constructor<T>,
     context: ResolutionContext
-  ): T {
-    if (ctor instanceof DelayedConstructor) {
-      return ctor.createProxy((target: constructor<T>) =>
-        this.resolve(target, context)
+  ): Promise<T> {
+    if (typeof ctor === "undefined") {
+      throw new Error(
+        "Attempted to construct an undefined constructor. Could mean a circular dependency problem."
       );
     }
 
-    const instance: T = (() => {
+    const instance: T = await (async () => {
       const paramInfo = typeInfo.get(ctor);
       if (!paramInfo || paramInfo.length === 0) {
         if (ctor.length === 0) {
@@ -528,7 +534,13 @@ class InternalDependencyContainer implements DependencyContainer {
         }
       }
 
-      const params = paramInfo.map(this.resolveParams(context, ctor));
+      let idx = 0;
+      const params = [];
+      const resolver = this.resolveParams(context, ctor);
+      for (const param of paramInfo) {
+        params.push(await resolver(param, idx));
+        idx++;
+      }
 
       return new ctor(...params);
     })();
@@ -541,31 +553,31 @@ class InternalDependencyContainer implements DependencyContainer {
   }
 
   private resolveParams<T>(context: ResolutionContext, ctor: constructor<T>) {
-    return (param: ParamInfo, idx: number) => {
+    return async (param: ParamInfo, idx: number) => {
       try {
         if (isTokenDescriptor(param)) {
           if (isTransformDescriptor(param)) {
             return param.multiple
-              ? this.resolve(param.transform).transform(
-                  this.resolveAll(param.token),
+              ? (await this.resolve(param.transform)).transform(
+                  await this.resolveAll(param.token),
                   ...param.transformArgs
                 )
-              : this.resolve(param.transform).transform(
-                  this.resolve(param.token, context),
+              : (await this.resolve(param.transform)).transform(
+                  await this.resolve(param.token, context),
                   ...param.transformArgs
                 );
           } else {
             return param.multiple
-              ? this.resolveAll(param.token)
-              : this.resolve(param.token, context);
+              ? await this.resolveAll(param.token)
+              : await this.resolve(param.token, context);
           }
         } else if (isTransformDescriptor(param)) {
-          return this.resolve(param.transform, context).transform(
-            this.resolve(param.token, context),
+          return (await this.resolve(param.transform, context)).transform(
+            await this.resolve(param.token, context),
             ...param.transformArgs
           );
         }
-        return this.resolve(param, context);
+        return await this.resolve(param, context);
       } catch (e) {
         throw new Error(formatErrorCtor(ctor, idx, e as Error));
       }

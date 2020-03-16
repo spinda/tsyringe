@@ -5,10 +5,10 @@ export default function instancePerContainerCachingFactory<T>(
   factoryFunc: FactoryFunction<T>
 ): FactoryFunction<T> {
   const cache = new WeakMap<DependencyContainer, T>();
-  return (dependencyContainer: DependencyContainer) => {
+  return async (dependencyContainer: DependencyContainer) => {
     let instance = cache.get(dependencyContainer);
     if (instance == undefined) {
-      instance = factoryFunc(dependencyContainer);
+      instance = await factoryFunc(dependencyContainer);
       cache.set(dependencyContainer, instance);
     }
     return instance;
