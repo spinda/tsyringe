@@ -253,7 +253,7 @@ class InternalDependencyContainer implements DependencyContainer {
     }
 
     throw new Error(
-      "Attempted to construct an undefined constructor. Could mean a circular dependency problem. Try using `delay` function."
+      "Attempted to construct an undefined constructor. Could mean a circular dependency problem."
     );
   }
 
