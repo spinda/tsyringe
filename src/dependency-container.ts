@@ -356,12 +356,10 @@ class InternalDependencyContainer implements DependencyContainer {
   ): Promise<T[]> {
     this.ensureNotDisposed();
 
-    const registrations = this.getAllRegistrations(token);
+    let registrations = this.getAllRegistrations(token);
 
     if (!registrations && isNormalToken(token)) {
-      throw new Error(
-        `Attempted to resolve unregistered dependency token: "${token.toString()}"`
-      );
+      registrations = [];
     }
 
     this.executePreResolutionInterceptor(token, "All");
