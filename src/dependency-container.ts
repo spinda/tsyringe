@@ -294,20 +294,34 @@ class InternalDependencyContainer implements DependencyContainer {
     }
   }
 
-  private async resolveRegistration<T>(
+  private resolveRegistration<T>(
     registration: Registration,
     context: ResolutionContext
   ): Promise<T> {
     this.ensureNotDisposed();
 
-    // If we have already resolved this scoped dependency, return it
+    // If we have already resolved or are already resolving this scoped dependency, return its promise
     if (
       registration.options.lifecycle === Lifecycle.ResolutionScoped &&
       context.scopedResolutions.has(registration)
     ) {
       return context.scopedResolutions.get(registration);
     }
+    const resolutionPromise = this.resolveRegistrationHelper<T>(
+      registration,
+      context
+    );
+    // If this is a scoped dependency, store promise for the resolved instance in context
+    if (registration.options.lifecycle === Lifecycle.ResolutionScoped) {
+      context.scopedResolutions.set(registration, resolutionPromise);
+    }
+    return resolutionPromise;
+  }
 
+  private async resolveRegistrationHelper<T>(
+    registration: Registration,
+    context: ResolutionContext
+  ): Promise<T> {
     const isSingleton = registration.options.lifecycle === Lifecycle.Singleton;
     const isContainerScoped =
       registration.options.lifecycle === Lifecycle.ContainerScoped;
@@ -341,11 +355,6 @@ class InternalDependencyContainer implements DependencyContainer {
     }
 
     // TODO (KJM): wait for async initialization of `resolved`
-
-    // If this is a scoped dependency, store resolved instance in context
-    if (registration.options.lifecycle === Lifecycle.ResolutionScoped) {
-      context.scopedResolutions.set(registration, resolved);
-    }
 
     return resolved;
   }
