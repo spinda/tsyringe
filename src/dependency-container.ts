@@ -30,6 +30,7 @@ import {formatErrorCtor} from "./error-helpers";
 import Disposable, {isDisposable} from "./types/disposable";
 import InterceptorOptions from "./types/interceptor-options";
 import Interceptors from "./interceptors";
+import {callInitializers} from "./decorators/initializer";
 
 export type Registration<T = any> = {
   provider: Provider<T>;
@@ -247,7 +248,7 @@ class InternalDependencyContainer implements DependencyContainer {
     // No registration for this token, but since it's a constructor, return an instance
     if (isConstructorToken(token)) {
       const result = await this.construct(token, context);
-      // TODO (KJM): wait for async initialization of `result`
+      await callInitializers(this, result);
       this.executePostResolutionInterceptor(token, result, "Single");
       return result;
     }
@@ -354,8 +355,7 @@ class InternalDependencyContainer implements DependencyContainer {
       resolved = await this.construct(registration.provider, context);
     }
 
-    // TODO (KJM): wait for async initialization of `resolved`
-
+    await callInitializers(this, resolved);
     return resolved;
   }
 
@@ -384,7 +384,7 @@ class InternalDependencyContainer implements DependencyContainer {
 
     // No registration for this token, but since it's a constructor, return an instance
     const result = [await this.construct(token as constructor<T>, context)];
-    // TODO (KJM): wait for async initialization of `resolved`
+    await callInitializers(this, result[0]);
     this.executePostResolutionInterceptor(token, result, "All");
     return result;
   }
