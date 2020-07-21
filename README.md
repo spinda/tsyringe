@@ -385,7 +385,7 @@ We have provided 2 factories for you to use, though any function that matches th
 can be used as a factory:
 
 ```typescript
-type FactoryFunction<T> = (dependencyContainer: DependencyContainer) => T;
+type FactoryFunction<T> = (dependencyContainer: DependencyContainer) => Promise<T>;
 ```
 
 ##### instanceCachingFactory
