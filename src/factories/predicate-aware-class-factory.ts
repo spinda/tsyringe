@@ -8,15 +8,15 @@ export default function predicateAwareClassFactory<T>(
   falseConstructor: constructor<T>,
   useCaching = true
 ): FactoryFunction<T> {
-  let instance: T;
+  let instance: Promise<T>;
   let previousPredicate: boolean;
   return async (dependencyContainer: DependencyContainer) => {
     const currentPredicate = predicate(dependencyContainer);
     if (!useCaching || previousPredicate !== currentPredicate) {
       if ((previousPredicate = currentPredicate)) {
-        instance = await dependencyContainer.resolve(trueConstructor);
+        instance = dependencyContainer.resolve(trueConstructor);
       } else {
-        instance = await dependencyContainer.resolve(falseConstructor);
+        instance = dependencyContainer.resolve(falseConstructor);
       }
     }
     return instance;

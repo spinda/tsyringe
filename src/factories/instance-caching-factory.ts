@@ -4,10 +4,10 @@ import FactoryFunction from "./factory-function";
 export default function instanceCachingFactory<T>(
   factoryFunc: FactoryFunction<T>
 ): FactoryFunction<T> {
-  let instance: T;
+  let instance: Promise<T>;
   return async (dependencyContainer: DependencyContainer) => {
     if (instance == undefined) {
-      instance = await factoryFunc(dependencyContainer);
+      instance = factoryFunc(dependencyContainer);
     }
     return instance;
   };
