@@ -56,7 +56,7 @@ npm install --save @launchtray/tsyringe-async
 **or** install with `yarn` (this project is developed using `yarn`)
 
 ```sh
-yarn add @launchtrary/tsyringe-async
+yarn add @launchtray/tsyringe-async
 ```
 
 Modify your `tsconfig.json` to include the following settings
