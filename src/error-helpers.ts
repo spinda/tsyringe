@@ -1,7 +1,7 @@
 import constructor from "./types/constructor";
 
 function formatDependency(params: string | null, idx: number): string {
-  if (params === null) {
+  if (params == null) {
     return `at position #${idx}`;
   }
   const argName = params.split(",")[idx].trim();

@@ -25,7 +25,7 @@ export async function resolveParams(
       resolvedArgs.push(await container.resolve(type));
     } catch (e) {
       const argIndex = index + args.length;
-      throw new Error(formatErrorCtor(target, argIndex, e));
+      throw new Error(formatErrorCtor(target, argIndex, e, propertyKey));
     }
     index += 1;
   }
