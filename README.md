@@ -48,13 +48,13 @@ the original tsyringe.
 Install by `npm`
 
 ```sh
-npm install --save @launchtray/tsyringe-async
+npm install --save @spinda/tsyringe-async
 ```
 
 **or** install with `yarn` (this project is developed using `yarn`)
 
 ```sh
-yarn add @launchtray/tsyringe-async
+yarn add @spinda/tsyringe-async
 ```
 
 Modify your `tsconfig.json` to include the following settings
@@ -126,7 +126,7 @@ to be instantiated.
 #### Usage
 
 ```typescript
-import {injectable} from "@launchtray/tsyringe-async";
+import {injectable} from "@spinda/tsyringe-async";
 
 @injectable()
 class Foo {
@@ -135,7 +135,7 @@ class Foo {
 
 // some other file
 import "reflect-metadata";
-import {container} from "@launchtray/tsyringe-async";
+import {container} from "@spinda/tsyringe-async";
 import {Foo} from "./foo";
 
 const instance = container.resolve(Foo);
@@ -149,7 +149,7 @@ global container.
 #### Usage
 
 ```typescript
-import {singleton} from "@launchtray/tsyringe-async";
+import {singleton} from "@spinda/tsyringe-async";
 
 @singleton()
 class Foo {
@@ -158,7 +158,7 @@ class Foo {
 
 // some other file
 import "reflect-metadata";
-import {container} from "@launchtray/tsyringe-async";
+import {container} from "@spinda/tsyringe-async";
 import {Foo} from "./foo";
 
 const instance = container.resolve(Foo);
@@ -172,7 +172,7 @@ information to be stored in the constructor's metadata.
 #### Usage
 
 ```typescript
-import {injectable, inject} from "@launchtray/tsyringe-async";
+import {injectable, inject} from "@spinda/tsyringe-async";
 
 interface Database {
   // ...
@@ -192,7 +192,7 @@ It will inject an array using the specified injection token to resolve the value
 #### Usage
 
 ```typescript
-import {injectable, injectAll} from "@launchtray/tsyringe-async";
+import {injectable, injectAll} from "@spinda/tsyringe-async";
 
 @injectable()
 class Foo {}
@@ -392,7 +392,7 @@ This factory is used to lazy construct an object and cache result, returning the
 resolution. This is very similar to `@singleton()`
 
 ```typescript
-import {instanceCachingFactory} from "@launchtray/tsyringe-async";
+import {instanceCachingFactory} from "@spinda/tsyringe-async";
 
 {
   token: "SingletonFoo";
@@ -420,7 +420,7 @@ This factory is used to provide conditional behavior upon resolution. It caches 
 has an optional parameter to resolve fresh each time.
 
 ```typescript
-import {predicateAwareClassFactory} from "@launchtray/tsyringe-async";
+import {predicateAwareClassFactory} from "@spinda/tsyringe-async";
 
 {
   token: "FooHttp",
@@ -633,7 +633,7 @@ export class Foo {}
 ```typescript
 // Bar.ts
 import {Foo} from "./Foo";
-import {injectable} from "@launchtray/tsyringe-async";
+import {injectable} from "@spinda/tsyringe-async";
 
 @injectable()
 export class Bar {
@@ -644,7 +644,7 @@ export class Bar {
 ```typescript
 // main.ts
 import "reflect-metadata";
-import {container} from "@launchtray/tsyringe-async";
+import {container} from "@spinda/tsyringe-async";
 import {Bar} from "./Bar";
 
 const myBar = container.resolve(Bar);
@@ -673,7 +673,7 @@ export class TestService implements SuperService {
 
 ```typescript
 // Client.ts
-import {injectable, inject} from "@launchtray/tsyringe-async";
+import {injectable, inject} from "@spinda/tsyringe-async";
 
 @injectable()
 export class Client {
@@ -686,7 +686,7 @@ export class Client {
 import "reflect-metadata";
 import {Client} from "./Client";
 import {TestService} from "./TestService";
-import {container} from "@launchtray/tsyringe-async";
+import {container} from "@spinda/tsyringe-async";
 
 container.register("SuperService", {
   useClass: TestService
