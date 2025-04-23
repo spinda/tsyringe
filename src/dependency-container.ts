@@ -32,6 +32,17 @@ import InterceptorOptions from "./types/interceptor-options";
 import Interceptors from "./interceptors";
 import {callInitializers} from "./decorators/initializer";
 
+declare global {
+  interface ErrorOptions {
+    cause?: unknown;
+  }
+
+  interface ErrorConstructor {
+    new (message?: string, options?: ErrorOptions): Error;
+    (message?: string, options?: ErrorOptions): Error;
+  }
+}
+
 export type Registration<T = any> = {
   provider: Provider<T>;
   options: RegistrationOptions;
@@ -586,7 +597,7 @@ class InternalDependencyContainer implements DependencyContainer {
         }
         return await this.resolve(param, context);
       } catch (e) {
-        throw new Error(formatErrorCtor(ctor, idx, e as Error));
+        throw new Error(formatErrorCtor(ctor, idx, e as Error), {cause: e});
       }
     };
   }
